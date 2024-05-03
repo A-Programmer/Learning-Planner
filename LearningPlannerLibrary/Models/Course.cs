@@ -15,4 +15,6 @@ public sealed class Course : BaseModel
     public void AddModule(Module module) => Modules.Add(module);
     public void AddModule(string name, TimeSpan? duration) => Modules.Add(new Module(name, duration));
     public void AddRange(IEnumerable<Module> modules) => Modules.AddRange(modules);
+
+    public void Sort() => Modules = Modules.OrderBy(m => m.Name).ToList();
 }

@@ -82,12 +82,16 @@ public class VideoLengthCalculator
     public static async Task<Module> GetModuleLengthAsync(string directoryPath,
         CancellationToken cancellationToken = default)
     {
-        Module module = new(new DirectoryInfo(Path.GetDirectoryName(directoryPath)).Name);
+        DirectoryInfo directoryInfo = new(directoryPath);
+        Module module = new(directoryInfo.Name);
 
-        await Parallel.ForEachAsync(GetModuleVideos(directoryPath, cancellationToken),  async (video, ct) =>
+        await foreach (var moduleVideo in GetModuleVideos(directoryPath, cancellationToken))
         {
-            module.AddVideo(video);
-        });
+            module.AddVideo(moduleVideo);
+        }
+
+        module.Duration = module.GetDuration();
+        module.Sort();
         
         return module;
     }
@@ -121,14 +125,18 @@ public class VideoLengthCalculator
             throw new DirectoryNotFoundException(nameof(courseRootPath));
         DirectoryInfo directoryInfo = new(courseRootPath);
 
-        List<DirectoryInfo> courseDirectories = directoryInfo.GetDirectories().ToList();
+        List<DirectoryInfo> courseDirectories = directoryInfo.GetDirectories().OrderBy(d => d.Name).ToList();
         
-        Course course = new(new DirectoryInfo(Path.GetDirectoryName(courseRootPath)).Name);
-
-        await Parallel.ForEachAsync(courseDirectories, cancellationToken, async (di, ct) =>
+        Course course = new(directoryInfo.Name);
+        
+        foreach (var courseDir in courseDirectories)
         {
-            course.AddModule(await GetModuleLengthAsync(di.FullName, ct));
-        });
+            var module = await GetModuleLengthAsync(courseDir.FullName, cancellationToken);
+            course.AddModule(module);
+        }
+
+        course.Duration = course.GetDuration();
+        course.Sort();
         
         return course;
     }
@@ -175,14 +183,19 @@ public class VideoLengthCalculator
             throw new DirectoryNotFoundException(nameof(pathRootPath));
         DirectoryInfo directoryInfo = new(pathRootPath);
 
-        List<DirectoryInfo> pathDirectories = directoryInfo.GetDirectories().ToList();
+        List<DirectoryInfo> pathDirectories = directoryInfo.GetDirectories().OrderBy(d => d.Name).ToList();
         
-        LearningPath path = new(new DirectoryInfo(Path.GetDirectoryName(pathRootPath)).Name);
+        LearningPath path = new(directoryInfo.Name);
 
-        await Parallel.ForEachAsync(pathDirectories, cancellationToken, async (di, ct) =>
+        foreach (var courseDir in pathDirectories)
         {
-            path.AddCourse(await GetCourseLengthAsync(di.FullName, ct));
-        });
+            var course = await GetCourseLengthAsync(courseDir.FullName, cancellationToken);
+            path.AddCourse(course);
+        }
+
+        path.Duration = path.GetDuration();
+        path.Sort();
+        
         return path;
     }
 
@@ -200,7 +213,7 @@ public class VideoLengthCalculator
         
         List<DirectoryInfo> pathDirectories = directoryInfo.GetDirectories().ToList();
         
-        NonStructuredDirectory nonStructuredDirectory = new(new DirectoryInfo(Path.GetDirectoryName(nonStructuredRootPath)).Name, new TimeSpan(0));
+        NonStructuredDirectory nonStructuredDirectory = new(directoryInfo.Name);
         
         await Parallel.ForEachAsync(GetModuleVideos(nonStructuredRootPath, cancellationToken), cancellationToken, async (video, ct) =>
         {
@@ -229,6 +242,7 @@ public class VideoLengthCalculator
         var supportedVideos = directoryInfo
             .GetFiles()
             .Where(f => VideoHelper.IsMediaFile(f.Name))
+            .OrderBy(f => f.Name)
             .ToList();
 
         List<Task<Video>> videos = new List<Task<Video>>();

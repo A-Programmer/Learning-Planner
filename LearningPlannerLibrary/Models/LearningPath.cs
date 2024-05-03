@@ -15,4 +15,6 @@ public sealed class LearningPath : BaseModel
     public void AddCourse(Course course) => Courses.Add(course);
     public void AddCourse(string name, TimeSpan? duration) => Courses.Add(new Course(name, duration));
     public void AddRange(IEnumerable<Course> courses) => Courses.AddRange(courses);
+
+    public void Sort() => Courses = Courses.OrderBy(c => c.Name).ToList();
 }
