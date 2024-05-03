@@ -2,6 +2,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Unicode;
+using BoardsLibrary;
 using static LearningPlannerLibrary.LengthCalculator.VideoLengthCalculator;
 namespace VideoLengthCalculator;
 
@@ -9,6 +10,10 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        AzureBoardsService azBoard = new("PATH", "OrganizationURL", "Project Name");
+
+        var workItems = await azBoard.ListAllWorkItems();
+        
         JsonSerializerOptions options = new()
         {
             WriteIndented = true

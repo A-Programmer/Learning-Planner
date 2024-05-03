@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoLengthCalculator", "Vi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LearningPlannerLibrary", "LearningPlannerLibrary\LearningPlannerLibrary.csproj", "{EF01FDBD-549B-475C-B540-1253F6EDA577}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BoardsLibrary", "BoardsLibrary\BoardsLibrary.csproj", "{6F6A0B37-F48D-46B5-9787-E197485CC779}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{EF01FDBD-549B-475C-B540-1253F6EDA577}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF01FDBD-549B-475C-B540-1253F6EDA577}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF01FDBD-549B-475C-B540-1253F6EDA577}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F6A0B37-F48D-46B5-9787-E197485CC779}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F6A0B37-F48D-46B5-9787-E197485CC779}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F6A0B37-F48D-46B5-9787-E197485CC779}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F6A0B37-F48D-46B5-9787-E197485CC779}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
