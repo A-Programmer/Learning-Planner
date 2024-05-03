@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using LearningPlannerLibrary.Models;
 using LearningPlannerLibrary.Utilities;
@@ -32,9 +33,9 @@ public class VideoLengthCalculator
             string durationString = await CommandLineManager.ExecuteCommandAsync(command, cancellationToken);
 
             if (!TimeSpan.TryParse(durationString,
-                    new CultureInfo("en-US"),
-                    out var duration))
-                throw new Exception("Failed to parse video duration.");
+                   new CultureInfo("en-US"),
+                   out var duration))
+                throw new Exception("Duration could not be calculated.");
 
             return new Video(Path.GetFileName(videoPath), duration);
         }
@@ -81,20 +82,11 @@ public class VideoLengthCalculator
     public static async Task<Module> GetModuleLengthAsync(string directoryPath,
         CancellationToken cancellationToken = default)
     {
-        if (!directoryPath.IsValidPath())
-            throw new DirectoryNotFoundException(nameof(directoryPath));
-        DirectoryInfo directoryInfo = new(directoryPath);
-
-        var supportedVideos = directoryInfo
-            .GetFiles()
-            .Where(f => VideoHelper.IsMediaFile(f.Name))
-            .ToList();
-        
         Module module = new(new DirectoryInfo(Path.GetDirectoryName(directoryPath)).Name);
 
-        await Parallel.ForEachAsync(supportedVideos, cancellationToken, async (video, ct) =>
+        await Parallel.ForEachAsync(GetModuleVideos(directoryPath, cancellationToken),  async (video, ct) =>
         {
-            module.AddVideo(await GetVideoLengthAsync(video.FullName, ct));
+            module.AddVideo(video);
         });
         
         return module;
@@ -136,8 +128,6 @@ public class VideoLengthCalculator
         await Parallel.ForEachAsync(courseDirectories, cancellationToken, async (di, ct) =>
         {
             course.AddModule(await GetModuleLengthAsync(di.FullName, ct));
-            
-            course.Duration = new TimeSpan(course.Modules.Select(v => v.Duration).Sum(d => d.Ticks));
         });
         
         return course;
@@ -206,32 +196,16 @@ public class VideoLengthCalculator
     public static async Task<NonStructuredDirectory> GetNonStructuredPathLength(string nonStructuredRootPath,
         CancellationToken cancellationToken = default)
     {
-        if (!nonStructuredRootPath.IsValidPath())
-            throw new DirectoryNotFoundException(nameof(nonStructuredRootPath));
-        
         DirectoryInfo directoryInfo = new(nonStructuredRootPath);
-
-        List<FileInfo> supportedVideos = new();
-        supportedVideos = directoryInfo
-            .GetFiles()
-            .Where(f => VideoHelper.IsMediaFile(f.Name))
-            .ToList();
-
+        
         List<DirectoryInfo> pathDirectories = directoryInfo.GetDirectories().ToList();
         
         NonStructuredDirectory nonStructuredDirectory = new(new DirectoryInfo(Path.GetDirectoryName(nonStructuredRootPath)).Name, new TimeSpan(0));
         
-        if (supportedVideos.Count != 0)
+        await Parallel.ForEachAsync(GetModuleVideos(nonStructuredRootPath, cancellationToken), cancellationToken, async (video, ct) =>
         {
-            await Parallel.ForEachAsync(supportedVideos, cancellationToken, async (video, ct) =>
-            {
-                nonStructuredDirectory.AddVideo(await GetVideoLengthAsync(video.FullName, ct));
-            });
-        }
-        else
-        {
-            nonStructuredDirectory.Duration = new TimeSpan(0);
-        }
+            nonStructuredDirectory.AddVideo(video);
+        });
         
         if (pathDirectories.Count != 0)
         {
@@ -242,5 +216,34 @@ public class VideoLengthCalculator
         }
         
         return nonStructuredDirectory;
+    }
+    
+
+    private static async IAsyncEnumerable<Video> GetModuleVideos(string modulePath,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        if (!modulePath.IsValidPath())
+            throw new DirectoryNotFoundException(nameof(modulePath));
+        DirectoryInfo directoryInfo = new(modulePath);
+
+        var supportedVideos = directoryInfo
+            .GetFiles()
+            .Where(f => VideoHelper.IsMediaFile(f.Name))
+            .ToList();
+
+        List<Task<Video>> videos = new List<Task<Video>>();
+        foreach (var file in supportedVideos)
+        {
+            videos.Add(GetVideoLengthAsync(file.FullName, cancellationToken));
+        }
+
+        while (videos.Any())
+        {
+            var completedVideoLengthCalculator = await Task.WhenAny(videos).ConfigureAwait(false);
+            videos.Remove(completedVideoLengthCalculator);
+
+            var video = await completedVideoLengthCalculator.ConfigureAwait(false);
+            yield return video;
+        }
     }
 }
